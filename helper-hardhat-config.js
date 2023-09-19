@@ -18,7 +18,6 @@ const networkConfig = {
     gasLane:
       "0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c", // 30 gwei
     keepersUpdateInterval: "30",
-    raffleEntranceFee: "100000000000000000", // 0.1 ETH
     callbackGasLimit: "500000", // 500,000 gas
   },
   1: {
@@ -27,14 +26,8 @@ const networkConfig = {
   },
 }
 
-const developmentChains = ["hardhat", "localhost"]
+const developmentChains = ["hardhat", "localhost", "sepolia"]
 const VERIFICATION_BLOCK_CONFIRMATIONS = 6
-// const frontEndContractsFile =
-//   "../nextjs-nft-marketplace-moralis-fcc/constants/networkMapping.json"
-// const frontEndContractsFile2 =
-//   "../nextjs-nft-marketplace-thegraph-fcc/constants/networkMapping.json"
-// const frontEndAbiLocation = "../nextjs-nft-marketplace-moralis-fcc/constants/"
-// const frontEndAbiLocation2 = "../nextjs-nft-marketplace-thegraph-fcc/constants/"
 
 module.exports = {
   networkConfig,

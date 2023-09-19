@@ -4,6 +4,8 @@ coverage
 coverage.json
 typechain
 typechain-types
+depolyments
+sepolia
 
 # Hardhat files
 cache
