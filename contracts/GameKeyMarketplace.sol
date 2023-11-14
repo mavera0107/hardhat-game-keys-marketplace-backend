@@ -5,12 +5,17 @@ error InsufficientFunds(uint256 available, uint256 required);
 error PriceMustBeAboveZero();
 error NoListingFound();
 error TransferFailed();
+error PercetageCantBeAbove100();
 
 contract GameKeyMarketplace {
 
     struct Game{
-        uint256 gameId;
-        string gameKey;
+        uint256 id;
+        string key;
+        string name;
+        string image;
+        string[] tags;
+        string[] genres;
     }
     struct Listing {
         Game game;
@@ -18,9 +23,8 @@ contract GameKeyMarketplace {
         address seller;
     }
 
-
-    event ItemListed(uint256 indexed gameId, uint256 indexed price, address indexed seller);
-    event ItemBought(uint256 indexed gameId, uint256 indexed price, address indexed buyer);
+    event ItemListed(uint256 indexed gameId, uint256 indexed price,string gameName, string gameImage, string[] tags, string[] genres, address indexed seller);
+    event ItemBought(uint256 indexed gameId, uint256 indexed price,string gameName, string gameImage, address indexed buyer);
     event ItemCancelled(uint256 indexed gameId, uint256 indexed price, address indexed seller);
 
     // gameId => seller => price => Listing[]
@@ -29,18 +33,23 @@ contract GameKeyMarketplace {
     mapping(address => Game[]) private gamesBought;
 
     mapping(address => uint256) private balances;
+    address private owner;
+    uint256 private sellersPercentage;
 
     constructor() {
-        
+        balances[msg.sender] = 0;
+        owner = msg.sender;
+        sellersPercentage = 99;
     }
 
-    function listGameKey(string memory gameKey, uint256 gameId, uint256 price) external {
+    function listGameKey(Game memory game,  uint256 price) external {
         if (price <=0 ) {
             revert PriceMustBeAboveZero();
         }
-        listings[gameId][msg.sender][price].push(Listing(Game(gameId, gameKey), price, msg.sender));
-        emit ItemListed(gameId, price, msg.sender);
+        listings[game.id][msg.sender][price].push(Listing(game, price, msg.sender));
+        emit ItemListed(game.id , price,game.name,game.image,game.tags, game.genres, msg.sender);
     }
+
 
     function buyGameKey(uint256 gameId, address seller, uint256 price) external payable returns(string memory) {
         Listing[] memory listing = listings[gameId][seller][price];
@@ -51,19 +60,21 @@ contract GameKeyMarketplace {
             revert InsufficientFunds(msg.value, price);
         }
 
-        string memory gameKey = listing[listing.length -1].game.gameKey;
-        gamesBought[msg.sender].push(Game(gameId, gameKey));
+        Game memory game = listing[listing.length -1].game;
+        gamesBought[msg.sender].push(game);
 
         if(listing.length == 1) {
             delete listings[gameId][seller][price];
         }else{
             listings[gameId][seller][price].pop();
         }
-        balances[seller] += price;
+        uint256 sellersPay = price * sellersPercentage / 100;
+        balances[seller] += sellersPay;
+        balances[owner] += msg.value - sellersPay;
 
-        emit ItemBought(gameId, price, msg.sender);
+        emit ItemBought(gameId, price, game.name,game.image, msg.sender);
 
-        return gameKey;
+        return game.key;
     }
 
     function cancelListing(uint256 gameId, uint256 price) external {
@@ -84,13 +95,17 @@ contract GameKeyMarketplace {
         if(listing.length == 0) {
             revert NoListingFound();
         }
-        listings[gameId][msg.sender][newPrice].push(Listing(listing[listing.length - 1].game, newPrice, msg.sender));
+        Listing memory newListing = Listing(listing[listing.length - 1].game, newPrice, msg.sender);
+        listings[gameId][msg.sender][newPrice].push(newListing);
 
         if(listing.length == 1) {
             delete listings[gameId][msg.sender][price];
         }else{
             listings[gameId][msg.sender][price].pop();
         }
+
+        emit ItemCancelled(gameId, price, msg.sender);
+        emit ItemListed(gameId, newPrice, newListing.game.name, newListing.game.image, newListing.game.tags, newListing.game.genres, msg.sender);
     }
 
     function withdraw() external {
@@ -100,6 +115,16 @@ contract GameKeyMarketplace {
         if(!success) {
             revert TransferFailed();
         }
+    }
+
+    function ChangeSellersPercentage(uint256 newPercentage) external {
+        if(msg.sender != owner) {
+            revert("Only owner can change the percentage");
+        }
+        if (newPercentage > 100) {
+            revert PercetageCantBeAbove100();
+        }
+        sellersPercentage = newPercentage;
     }
 
     function getGamesBought() external view returns(Game[] memory) {
